@@ -1,13 +1,12 @@
-import * as autoprefixer from 'autoprefixer';
 import * as postcss from 'postcss';
-import * as cssnano from 'cssnano';
-import * as fs from 'fs';
 
-const filterParams = [
-    '(-webkit-min-device-pixel-ratio: 2.5),(min-device-pixel-ratio:2.5),(-webkit-min-device-pixel-ratio:2.5),(min-resolution:2.5dppx),(min-resolution:240dpi)',
-    '(-webkit-min-device-pixel-ratio: 1.5) and (-webkit-max-device-pixel-ratio:2.49),(-webkit-min-device-pixel-ratio:1.5) and (-webkit-max-device-pixel-ratio:2.4895833333333335),(min-device-pixel-ratio:1.5) and (max-device-pixel-ratio:2.49),(-webkit-min-device-pixel-ratio:1.5) and (-webkit-max-device-pixel-ratio:2.49),(min-resolution:1.5dppx) and (max-resolution:2.49dppx),(min-resolution:144dpi) and (max-resolution:239dpi)',
-    '(-webkit-max-device-pixel-ratio: 1.49),(-webkit-max-device-pixel-ratio:1.4895833333333333),(max-device-pixel-ratio:1.49),(-webkit-max-device-pixel-ratio:1.49),(max-resolution:1.49dppx),(max-resolution:143dpi)'
-]
+let filterParams = [
+    '(-webkit-min-device-pixel-ratio:2.5), (min-device-pixel-ratio: 2.5), (min-resolution: 240dpi), (min-resolution: 2.5dppx)',
+    '(-webkit-min-device-pixel-ratio:1.5) and (-webkit-max-device-pixel-ratio: 2.49), (min-device-pixel-ratio: 1.5) and (max-device-pixel-ratio: 2.49), (min-resolution: 144dpi) and (max-resolution: 239dpi), (min-resolution: 1.5dppx) and (max-resolution: 2.49dppx)',
+    '(-webkit-max-device-pixel-ratio:1.49), (max-device-pixel-ratio: 1.49), (max-resolution: 143dpi), (max-resolution: 1.49dppx)'
+];
+
+filterParams = filterParams.map(param => getParams(param));
 
 function getIndex(root: postcss.Root, rule: postcss.ChildNode) {
     let index = root.index(rule)
@@ -37,7 +36,11 @@ function canMerge(root: postcss.Root, rules: postcss.Rule[], rule: postcss.Rule,
     }))
 }
 
-const myPlugin = postcss.plugin('myplugin', () => {
+function getParams(params: string) {
+    return params.replace(/\s/g, '');
+}
+
+const myPlugin = postcss.plugin('postcss-merge-media', () => {
     return (root) => {
         const atRules = [];
         const filterAtRules: {[name: string]: {
@@ -49,15 +52,13 @@ const myPlugin = postcss.plugin('myplugin', () => {
         })
 
         atRules.forEach((r: postcss.AtRule) => {
-            if (filterParams.includes(r.params)) {
+            if (filterParams.includes(getParams(r.params))) {
                 filterAtRules[r.params] = {
                     atRule: r,
                     index: getIndex(root, r)
                 }
             }
         })
-
-        console.log(1)
         
         const orderFilterAtRules = Object.keys(filterAtRules).map(key => filterAtRules[key]).sort((a, b) =>{
             return a.index - b.index;
@@ -67,7 +68,7 @@ const myPlugin = postcss.plugin('myplugin', () => {
             const rules = getRules(root)
             rules.reverse().forEach(rule => {
                 const parent = rule.parent;
-                if (parent.type === 'atrule' && parent.params === atRule.params && parent !== atRule) {
+                if (parent.type === 'atrule' && getParams(parent.params) === getParams(atRule.params) && parent !== atRule) {
                     const merge = canMerge(root, rules, rule, atRule);
                     if (merge) {
                         atRule.prepend(rule);
@@ -80,11 +81,5 @@ const myPlugin = postcss.plugin('myplugin', () => {
         })
     }
 })
-fs.readFile('index.css', (err, css) => {
-    if (err) return;
-    postcss([autoprefixer, cssnano, myPlugin])
-        .process(css, { from: 'index.css', to: 'lib.css' })
-        .then(result => {
-            fs.writeFile('lib.css', result.css, () => true)
-        })
-})
+
+export default myPlugin;
