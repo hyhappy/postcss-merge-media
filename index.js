@@ -53,7 +53,6 @@ const myPlugin = postcss.plugin('postcss-merge-media', () => {
                 };
             }
         });
-        console.log(filterAtRules);
         const orderFilterAtRules = Object.keys(filterAtRules).map(key => filterAtRules[key]).sort((a, b) => {
             return a.index - b.index;
         });
