@@ -1,6 +1,6 @@
 {
     "name": "postcss-merge-media",
-    "version": "0.0.1",
+    "version": "0.0.2",
     "dependencies": {
         "@types/node": "^13.1.6",
         "autoprefixer": "^9.7.3",
